@@ -152,18 +152,34 @@ fn get_device(
     } else {
         D3D11_CREATE_DEVICE_BGRA_SUPPORT
     };
+    let mut forced_feature_level = None;
+    if let Ok(level) = std::env::var("GPUI_FORCE_D3D_FEATURE_LEVEL") {
+        match level.as_str() {
+            "11.1" => forced_feature_level = Some(D3D_FEATURE_LEVEL_11_1),
+            "11.0" => forced_feature_level = Some(D3D_FEATURE_LEVEL_11_0),
+            "10.1" => forced_feature_level = Some(D3D_FEATURE_LEVEL_10_1),
+            _ => log::warn!("Invalid GPUI_FORCE_D3D_FEATURE_LEVEL: {}", level),
+        }
+    }
+
+    let feature_levels = if let Some(level) = forced_feature_level {
+        log::info!("Forcing DirectX feature level: {:?}", level);
+        vec![level]
+    } else {
+        vec![
+            D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_10_1,
+        ]
+    };
+
     unsafe {
         D3D11CreateDevice(
             adapter,
             D3D_DRIVER_TYPE_UNKNOWN,
             HMODULE::default(),
             device_flags,
-            // 4x MSAA is required for Direct3D Feature Level 10.1 or better
-            Some(&[
-                D3D_FEATURE_LEVEL_11_1,
-                D3D_FEATURE_LEVEL_11_0,
-                D3D_FEATURE_LEVEL_10_1,
-            ]),
+            Some(&feature_levels),
             D3D11_SDK_VERSION,
             Some(&mut device),
             feature_level,

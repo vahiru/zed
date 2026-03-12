@@ -1141,6 +1141,11 @@ impl WindowsWindowInner {
 
     #[inline]
     fn draw_window(&self, handle: HWND, force_render: bool) -> Option<isize> {
+        let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
+        if is_detailed_log {
+            log::debug!("draw_window(handle: {:?}, force_render: {})", handle, force_render);
+        }
+
         let mut request_frame = self.state.callbacks.request_frame.take()?;
 
         // we are instructing gpui to force render a frame, this will

@@ -136,7 +136,9 @@ impl DirectXRenderer {
         disable_direct_composition: bool,
     ) -> Result<Self> {
         if disable_direct_composition {
-            log::info!("Direct Composition is disabled.");
+            log::info!("Direct Composition is disabled (requested by environment variable).");
+        } else {
+            log::info!("Direct Composition is enabled.");
         }
 
         let devices = DirectXRendererDevices::new(directx_devices, disable_direct_composition)
@@ -214,6 +216,10 @@ impl DirectXRenderer {
 
     #[inline]
     fn present(&mut self) -> Result<()> {
+        let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
+        if is_detailed_log {
+            log::debug!("Presenting swap chain...");
+        }
         let result = unsafe {
             self.resources
                 .as_ref()
@@ -221,7 +227,14 @@ impl DirectXRenderer {
                 .swap_chain
                 .Present(0, DXGI_PRESENT(0))
         };
-        result.ok().context("Presenting swap chain failed")
+        if let Err(e) = result.ok() {
+            log::error!("Presenting swap chain failed: {}", e);
+            return Err(e.into());
+        }
+        if is_detailed_log {
+            log::debug!("Present successful.");
+        }
+        Ok(())
     }
 
     pub(crate) fn handle_device_lost(&mut self, directx_devices: &DirectXDevices) -> Result<()> {
@@ -759,8 +772,10 @@ impl DirectXResources {
         disable_direct_composition: bool,
     ) -> Result<Self> {
         let swap_chain = if disable_direct_composition {
+            log::info!("Creating swap chain for HWND: {:?}", hwnd);
             create_swap_chain(&devices.dxgi_factory, &devices.device, hwnd, width, height)?
         } else {
+            log::info!("Creating swap chain for DirectComposition ({}x{})", width, height);
             create_swap_chain_for_composition(
                 &devices.dxgi_factory,
                 &devices.device,
