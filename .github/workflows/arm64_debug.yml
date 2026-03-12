@@ -1,0 +1,35 @@
+name: arm64_debug
+on:
+  workflow_dispatch:
+
+jobs:
+  bundle_windows_aarch64:
+    name: Build Windows ARM64 (.exe)
+    runs-on: windows-2022
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Bundled ARM64 Binary
+        run: |
+          # 清除 CI 变量以跳过签名检查
+          $env:CI = $null
+          # 设置基本变量
+          $env:ZED_WORKSPACE = Get-Location
+          # 运行打包脚本
+          .\script\bundle-windows.ps1 -Architecture aarch64
+        shell: pwsh
+
+      - name: Upload Zed-aarch64 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zed-aarch64-debug
+          path: target/Zed-aarch64.exe
+          if-no-files-found: error
