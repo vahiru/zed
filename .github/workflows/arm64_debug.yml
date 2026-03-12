@@ -22,16 +22,27 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Enable Long Paths
+        run: |
+          git config --global core.longpaths true
+          New-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\FileSystem" `
+            -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+        shell: powershell
+
       - name: Build Bundled ARM64 Binary
         run: |
           # 显式清除 CI 变量以跳过正式发布的签名和变量检查
           $env:CI = $null
           
+          # 缩短 Cargo 路径以防止 Windows 路径过长错误
+          $env:CARGO_HOME = "C:\c"
+          if (!(Test-Path $env:CARGO_HOME)) { New-Item -Path $env:CARGO_HOME -ItemType Directory }
+          
           # 强制设置工作目录为字符串路径
           $env:ZED_WORKSPACE = (Get-Location).Path
           Write-Output "Workspace: $env:ZED_WORKSPACE"
           
-          # 预先拉取依赖，确保脚本执行时 metadata 可用
+          # 预先拉取依赖
           Write-Output "Fetching dependencies..."
           cargo fetch
           
