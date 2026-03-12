@@ -317,8 +317,15 @@ impl DirectWriteState {
                         &this.system_font_collection,
                         &components.system_ui_font_name,
                     )
-                })?;
+                });
+            
+            if let Some(ref info) = info {
+                log::info!("[GPUI_RENDER_DEBUG] Matched font: {:?} -> {:?}", font.family, info.font_family_h);
+            } else {
+                log::warn!("[GPUI_RENDER_DEBUG] Failed to match font: {:?}", font.family);
+            }
 
+            let info = info?;
             let font_id = FontId(this.fonts.len());
             let font_face_key = info.font_face.cast::<IUnknown>().unwrap().as_raw().addr();
             this.fonts.push(info);

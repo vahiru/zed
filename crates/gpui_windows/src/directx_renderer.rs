@@ -160,6 +160,7 @@ impl DirectXRenderer {
             composition
                 .set_swap_chain(&resources.swap_chain)
                 .context("Setting swap chain for DirectComposition")?;
+            log::info!("[GPUI_RENDER_DEBUG] DirectComposition set_swap_chain success");
             Some(composition)
         };
 
@@ -218,7 +219,7 @@ impl DirectXRenderer {
     fn present(&mut self) -> Result<()> {
         let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
         if is_detailed_log {
-            log::debug!("Presenting swap chain...");
+            log::info!("[GPUI_RENDER_DEBUG] Presenting swap chain...");
         }
         let result = unsafe {
             self.resources
@@ -228,11 +229,11 @@ impl DirectXRenderer {
                 .Present(0, DXGI_PRESENT(0))
         };
         if let Err(e) = result.ok() {
-            log::error!("Presenting swap chain failed: {}", e);
+            log::error!("[GPUI_RENDER_DEBUG] Presenting swap chain failed: {}", e);
             return Err(e.into());
         }
         if is_detailed_log {
-            log::debug!("Present successful.");
+            log::info!("[GPUI_RENDER_DEBUG] Present successful.");
         }
         Ok(())
     }
