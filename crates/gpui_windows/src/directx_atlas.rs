@@ -281,6 +281,15 @@ impl DirectXAtlasTexture {
         bounds: Bounds<DevicePixels>,
         bytes: &[u8],
     ) {
+        let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
+        if is_detailed_log {
+            log::info!(
+                "[GPUI_RENDER_DEBUG] Uploading to atlas {:?}: bounds={:?}, bytes={}",
+                self.id,
+                bounds,
+                bytes.len()
+            );
+        }
         unsafe {
             device_context.UpdateSubresource(
                 &self.texture,
