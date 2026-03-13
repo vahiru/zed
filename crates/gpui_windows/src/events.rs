@@ -204,6 +204,16 @@ impl WindowsWindowInner {
         scale_factor: f32,
         should_resize_renderer: bool,
     ) {
+        let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
+        if is_detailed_log {
+            log::info!(
+                "WindowsWindowInner::handle_size_change(device_size: {:?}, scale_factor: {}, should_resize: {})",
+                device_size,
+                scale_factor,
+                should_resize_renderer
+            );
+        }
+
         let new_logical_size = device_size.to_pixels(scale_factor);
 
         self.state.logical_size.set(new_logical_size);

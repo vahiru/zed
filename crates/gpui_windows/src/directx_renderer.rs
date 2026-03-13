@@ -228,17 +228,20 @@ impl DirectXRenderer {
                 .swap_chain
                 .Present(0, DXGI_PRESENT(0))
         };
+
+        if is_detailed_log {
+            log::info!("[GPUI_RENDER_DEBUG] Present result: {:?}", result);
+        }
+
         if let Err(e) = result.ok() {
             log::error!("[GPUI_RENDER_DEBUG] Presenting swap chain failed: {}", e);
             return Err(e.into());
-        }
-        if is_detailed_log {
-            log::info!("[GPUI_RENDER_DEBUG] Present successful.");
         }
         Ok(())
     }
 
     pub(crate) fn handle_device_lost(&mut self, directx_devices: &DirectXDevices) -> Result<()> {
+        log::info!("DirectXRenderer::handle_device_lost() triggered");
         try_to_recover_from_device_lost(|| {
             self.handle_device_lost_impl(directx_devices)
                 .context("DirectXRenderer handling device lost")
@@ -369,6 +372,12 @@ impl DirectXRenderer {
     pub(crate) fn resize(&mut self, new_size: Size<DevicePixels>) -> Result<()> {
         let width = new_size.width.0.max(1) as u32;
         let height = new_size.height.0.max(1) as u32;
+
+        let is_detailed_log = std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1");
+        if is_detailed_log {
+            log::info!("DirectXRenderer::resize(size: {}x{})", width, height);
+        }
+
         if self.width == width && self.height == height {
             return Ok(());
         }
@@ -1186,6 +1195,17 @@ fn get_comp_device(dxgi_device: &IDXGIDevice) -> Result<IDCompositionDevice> {
     Ok(unsafe { DCompositionCreateDevice(dxgi_device)? })
 }
 
+fn get_swap_effect() -> DXGI_SWAP_EFFECT {
+    match std::env::var("GPUI_SWAP_EFFECT")
+        .map(|v| v.to_lowercase())
+        .as_deref()
+    {
+        Ok("discard") => DXGI_SWAP_EFFECT_FLIP_DISCARD,
+        Ok("sequential") => DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+        _ => DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+    }
+}
+
 fn create_swap_chain_for_composition(
     dxgi_factory: &IDXGIFactory6,
     device: &ID3D11Device,
@@ -1205,7 +1225,7 @@ fn create_swap_chain_for_composition(
         BufferCount: BUFFER_COUNT as u32,
         // Composition SwapChains only support the DXGI_SCALING_STRETCH Scaling.
         Scaling: DXGI_SCALING_STRETCH,
-        SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+        SwapEffect: get_swap_effect(),
         AlphaMode: DXGI_ALPHA_MODE_PREMULTIPLIED,
         Flags: 0,
     };
@@ -1233,7 +1253,7 @@ fn create_swap_chain(
         BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
         BufferCount: BUFFER_COUNT as u32,
         Scaling: DXGI_SCALING_NONE,
-        SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+        SwapEffect: get_swap_effect(),
         AlphaMode: DXGI_ALPHA_MODE_IGNORE,
         Flags: 0,
     };
