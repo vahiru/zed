@@ -85,6 +85,17 @@ impl PlatformAtlas for DirectXAtlas {
             let Some((size, bytes)) = build()? else {
                 return Ok(None);
             };
+            if std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1") {
+                let non_zero_count = bytes.iter().filter(|&&b| b > 0).count();
+                log::info!(
+                    "[GPUI_RENDER_DEBUG] Atlas inserting: key={:?}, kind={:?}, size={:?}, bytes={}, non_zero={}",
+                    key,
+                    key.texture_kind(),
+                    size,
+                    bytes.len(),
+                    non_zero_count
+                );
+            }
             let tile = lock
                 .allocate(size, key.texture_kind())
                 .ok_or_else(|| anyhow::anyhow!("failed to allocate"))?;

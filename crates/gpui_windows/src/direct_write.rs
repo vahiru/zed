@@ -292,6 +292,10 @@ impl PlatformTextSystem for DirectWriteTextSystem {
         _font_id: FontId,
         _font_size: Pixels,
     ) -> TextRenderingMode {
+        if std::env::var("GPUI_FORCE_GRAYSCALE").is_ok_and(|v| v == "1") {
+            return TextRenderingMode::Grayscale;
+        }
+
         if self.components.system_subpixel_rendering {
             TextRenderingMode::Subpixel
         } else {
@@ -813,6 +817,17 @@ impl DirectWriteState {
         } else {
             self.rasterize_monochrome(components, params, glyph_bounds)?
         };
+
+        if std::env::var("GPUI_LOG_RENDER_DETAILS").is_ok_and(|v| v == "1") {
+            let non_zero_count = bitmap_data.iter().filter(|&&b| b > 0).count();
+            log::info!(
+                "[GPUI_RENDER_DEBUG] Rasterized glyph: font={:?}, glyph={}, size={:?}, non_zero_pixels={}",
+                params.font_id,
+                params.glyph_id.0,
+                glyph_bounds.size,
+                non_zero_count
+            );
+        }
 
         Ok((glyph_bounds.size, bitmap_data))
     }
